@@ -1,50 +1,71 @@
-import express from 'express';
-import mongoose from 'mongoose';
+var express = require('express');
+var router = express.Router();
+var mongoose = require('mongoose');
+var Post = mongoose.model('Post');
+var Comment = mongoose.model('Comment');
 
-const Schema = mongoose.Schema;
+/* GET home page. */
+router.get('/', function(req, res, next) {
+  res.render('index', { title: 'Express' });
+});
 
-const UserSchema = new Schema({
-    username: String,
-    password: String
-})
+router.get('/posts', function(req, res, next) {
+  Post.find(function(err, posts){
+    if(err){ return next(err); }
 
-const User = mongoose.model("User", UserSchema, "User")
-
-const router = express.Router();
-
-/* GET index page. */
-router.get('/', (req, res, next) => {
-  User.find({},function(err,data){
-    res.render('index', {
-    title: 'Jannat',
-    data: data,
-    user_id: data[0]["_id"],
-    user_name: data[0]["username"]
+    res.json(posts);
   });
-  })
 });
 
-router.get("/posts", (req,res) => {
-  User.find({},function(err,data){
-    res.send(data)
-  })
-})
+router.post('/posts', function(req, res, next) {
+  var post = new Post(req.body);
+  //post.author = req.payload.username;
 
-router.post("/home", (req, res) => {
-    console.log(req.body.desc);
-    console.log(req.body.title);
-    User({
-				username:req.body.desc,
-				password:req.body.title
-				}).save(function(err,docs){
-					if(err){
-						res.json({"err":err})
-					}
-					else{
-						res.json({"message":"success"})
-					}
-				})
-    res.end();
+  post.save(function(err, post){
+    if(err){ return next(err); }
+
+    res.json(post);
+  });
 });
 
-export default router;
+router.param('post', function(req, res, next, id) {
+  var query = Post.findById(id);
+
+  query.exec(function (err, post){
+    if (err) { return next(err); }
+    if (!post) { return next(new Error('can\'t find post')); }
+
+    req.post = post;
+    return next();
+  });
+});
+
+router.get('/posts/:post', function(req, res) {
+  res.json(req.post);
+});
+
+router.put('/posts/:post/upvote', function(req, res, next) {
+  req.post.upvote(function(err, post){
+    if (err) { return next(err); }
+
+    res.json(post);
+  });
+});
+
+router.post('/posts/:post/comments', function(req, res, next) {
+  var comment = new Comment(req.body);
+  comment.post = req.post;
+
+  comment.save(function(err, comment){
+    if(err){ return next(err); }
+
+    req.post.comments.push(comment);
+    req.post.save(function(err, post) {
+      if(err){ return next(err); }
+
+      res.json(comment);
+    });
+  });
+});
+
+module.exports = router;

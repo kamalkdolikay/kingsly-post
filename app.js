@@ -1,58 +1,50 @@
-var app = angular.module("tujpu", ["ui.router"])
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var mongoose = require('mongoose');
+require('./models/Posts');
+require('./models/Comments');
 
-app.config([
-'$stateProvider',
-'$urlRouterProvider',
-function($stateProvider, $urlRouterProvider){
-  $stateProvider
-    .state('home',{
-      url: '/home',
-      templateUrl: '/home.html',
-      controller: 'main'
-    })
+mongoose.connect('mongodb://localhost/news');
+var index = require('./routes/index');
+var users = require('./routes/users');
 
-    .state('posts',{
-      url: '/posts',
-      templateUrl: '/posts.html',
-      controller: 'postctrl'
-    })
-  //$urlRouterProvider.otherwise('home')
-}])
+var app = express();
 
-app.factory('posts', ['$http', 'auth', function($http, auth){
-    var o = {
-    posts: []
-  };
-  o.get = function(id) {
-    return $http.get('/posts/' + id).then(function(res){
-      return res.data;
-    });
-  };
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
 
-  o.create = function(post) {
-  return $http.post('/posts', post, {
+// uncomment after placing your favicon in /public
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
 
-  }).success(function(data){
-    o.posts.push(data);
-    });
-  };
-  return o;
-}])
+app.use('/', index);
+app.use('/users', users);
 
-app.controller('main', function($scope, $http) {
-    $scope.sub = function() {
-        $http.post('/home',$scope.formData).
-        success(function(data) {
-            console.log("posted successfully");
-        }).error(function(data) {
-            console.error("error in posting");
-        })
-    }
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
 });
 
-app.controller("postctrl",[
-"$scope",
-function($scope){
-    $scope.name = "kamal"
-}])
+// error handler
+app.use(function(err, req, res, next) {
+  // set locals, only providing error in development
+  res.locals.message = err.message;
+  res.locals.error = req.app.get('env') === 'development' ? err : {};
 
+  // render the error page
+  res.status(err.status || 500);
+  res.render('error');
+});
+
+module.exports = app;
