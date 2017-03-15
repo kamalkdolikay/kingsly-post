@@ -12,65 +12,47 @@ function($stateProvider, $urlRouterProvider){
     })
 
     .state('posts',{
-      url: '/posts/{id}',
+      url: '/posts',
       templateUrl: '/posts.html',
       controller: 'postctrl'
     })
-  $urlRouterProvider.otherwise('home')
+  //$urlRouterProvider.otherwise('home')
 }])
 
-app.factory('posts', [ function(){
-  var o = {
+app.factory('posts', ['$http', 'auth', function($http, auth){
+    var o = {
     posts: []
   };
-  return o;
-}]);
+  o.get = function(id) {
+    return $http.get('/posts/' + id).then(function(res){
+      return res.data;
+    });
+  };
 
-app.controller("main",[
-"$scope", "posts",
-function($scope,posts){
-    console.log(posts)
-    console.log("posts")
-    $scope.posts = posts.posts;
-    $scope.posts = [
-        {title:"BJP", votes:2},
-        {title:"AAP", votes:3},
-        {title:"Congress", votes:1},
-    ]
-    $scope.addPost = function(){
-        if(!$scope.title || $scope.title === ''){ return }
-        $scope.posts.push({
-            title:$scope.title,
-            link:$scope.link,
-            votes:0,
-            comments: [
-                {author: 'Joe', body: 'Cool post!', upvotes: 0},
-                {author: 'Bob', body: 'Great idea but everything is wrong!', upvotes: 0}
-            ]
-        })
-        $scope.title = ''
-        $scope.link = ''
-    }
-    $scope.upvotes = function(post){
-        post.votes += 1
-    }
+  o.create = function(post) {
+  return $http.post('/posts', post, {
+
+  }).success(function(data){
+    o.posts.push(data);
+    });
+  };
+  return o;
 }])
+
+app.controller('main', function($scope, $http) {
+    $scope.sub = function() {
+        $http.post('/home',$scope.formData).
+        success(function(data) {
+            console.log("posted successfully");
+        }).error(function(data) {
+            console.error("error in posting");
+        })
+    }
+});
 
 app.controller("postctrl",[
-'$scope',
-'$stateParams',
-'posts',
-function($scope, $stateParams, posts){
-    console.log(posts)
-    console.log("posts")
-    $scope.post = posts.posts[$stateParams.id];
-    $scope.addComment = function(){
-        if($scope.body === '') { return }
-        $scope.post.comments.push({
-            body: $scope.body,
-            author: 'user',
-            upvotes: 0
-        });
-        $scope.body = ''
-    }
+"$scope",
+function($scope){
+    $scope.name = "kamal"
 }])
+
